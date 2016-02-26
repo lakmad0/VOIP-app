@@ -128,7 +128,7 @@ public class UDPServer{
           		    socket.receive( packet ) ;    
 
           		    // Print the packet
-          		   System.out.println( new String(packet.getData()) ) ;
+          		   //System.out.println( new String(packet.getData()) ) ;
 
         		    sourceDataLine.write(packet.getData(), 0, 500); //playing the audio   
         		         

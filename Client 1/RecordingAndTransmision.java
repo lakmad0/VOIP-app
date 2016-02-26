@@ -23,25 +23,25 @@ import javax.sound.sampled.SourceDataLine;
 import javax.sound.sampled.TargetDataLine;
 
 
-public class UDPClient{
+public class RecordingAndTransmision extends Thread{
 
 
 	//Give a standard packet size. 
-  	public final static int packetsize = 500 ;
-  	public static DatagramSocket socket = null ;
-  	public static InetAddress host = null;
-	public  static int port  = 45000;
+    	private final static int packetsize = 500 ;
+        private DatagramSocket socket = null ;
+        private InetAddress host = null;
+	    private  final int port  = 45001;
 
-	/***********************************************************************/
+	// /***********************************************************************/
 
 
-	public static  boolean stopCapture = false;
-	public static ByteArrayOutputStream byteArrayOutputStream;
+	private boolean stopCapture = false;
+	private ByteArrayOutputStream byteArrayOutputStream;
 	public static AudioFormat audioFormat;
 	public static TargetDataLine targetDataLine;
 	public static AudioInputStream audioInputStream;
 	public static SourceDataLine sourceDataLine;
-	public static byte tempBuffer[] = new byte[500];
+	private byte tempBuffer[] = new byte[500];
 
 
 
@@ -73,7 +73,7 @@ public class UDPClient{
                 }
             }
 
-            audioFormat = getAudioFormat();     //get the audio format
+            audioFormat = RecordingAndTransmision.getAudioFormat();     //get the audio format
             DataLine.Info dataLineInfo = new DataLine.Info(TargetDataLine.class, audioFormat);
 
             targetDataLine = (TargetDataLine) mixer.getLine(dataLineInfo);
@@ -89,7 +89,7 @@ public class UDPClient{
 	        FloatControl control = (FloatControl)sourceDataLine.getControl(FloatControl.Type.MASTER_GAIN);
 	        control.setValue(control.getMaximum());
 
-            captureAndPlay(); //playing the audio
+            //captureAndPlay(); //playing the audio
 
         } catch (LineUnavailableException e) {
             System.out.println(e);
@@ -99,28 +99,28 @@ public class UDPClient{
     }
 
 
-    private static void captureAndPlay() {
-        byteArrayOutputStream = new ByteArrayOutputStream();
-        stopCapture = false;
+    private void captureAndSend() {
+        this.byteArrayOutputStream = new ByteArrayOutputStream();
+        this.stopCapture = false;
         try {
             int readCount;
-            while (!stopCapture) {
-                readCount = targetDataLine.read(tempBuffer, 0, tempBuffer.length);  //capture sound into tempBuffer
+            while (!this.stopCapture) {
+                readCount = targetDataLine.read(this.tempBuffer, 0, this.tempBuffer.length);  //capture sound into tempBuffer
                 if (readCount > 0) {
-                    byteArrayOutputStream.write(tempBuffer, 0, readCount);
+                    this.byteArrayOutputStream.write(tempBuffer, 0, readCount);
                    // sourceDataLine.write(this.tempBuffer, 0, 500); 
 
                      //Q2: Construct the datagram packet
-	       			DatagramPacket packet  = new DatagramPacket(tempBuffer, tempBuffer.length , host , port);
+	       			DatagramPacket packet  = new DatagramPacket(this.tempBuffer, this.tempBuffer.length , this.host , port);
 	       			//sourceDataLine.write(packet.getData(), 0, 500); 
 	       			//System.out.println(new String(packet.getData()) ) ;
 
 	        		// Send the packet
-	        		socket.send( packet ) ;
+	        		this.socket.send( packet ) ;
 
                 }
             }
-            byteArrayOutputStream.close();
+            this.byteArrayOutputStream.close();
         } catch (IOException e) {
             System.out.println(e);
             System.exit(0);
@@ -132,37 +132,15 @@ public class UDPClient{
     /**************************************************************************/
 
 
-   
-   
-   
-  	public static void main( String args[] ){
+    public void run(){
 
-	    // Check the whether the arguments are given
+    	try{
 
-	    if( args.length != 2 ){
-	        System.out.println( "usage: java DatagramClient host " ) ;
-	        return ;         
-	    }
+	    	this.socket = new DatagramSocket();
+	    	RecordingAndTransmision.captureAudio();	
+	    	captureAndSend();
 
-	         
-	    
-		try{
-
-	        //Q1: Create a datagram socket object here
-	    	socket = new DatagramSocket();
-		 
-		    // Convert the arguments to ensure that they are valid
-	        host = InetAddress.getByName( args[0] ) ;
-	        port         = Integer.parseInt( args[1] ) ;
-	      
-	    
-	       // byte [] data = "The message watnts to pass".getBytes() ;
-
-	        captureAudio();	 
-	       
-	                 
-			   
-	    }catch( Exception e ){
+    	 }catch( Exception e ){
 
 	        System.out.println( e ) ;
 
@@ -171,6 +149,96 @@ public class UDPClient{
 	       socket.close() ;
 	      
 	    }
-     
+	} 
+   
+
+    /************************************************************************/
+
+
+	public  RecordingAndTransmision(InetAddress host){
+
+		this.host = host;
+
+	}
+
+
+	/***************************************************************************/
+
+   
+   
+  	public static void main( String args[] ){
+
+	    // Check the whether the arguments are given
+
+	    if( args.length != 1 ){
+	        System.out.println( "usage: java DatagramClient host " ) ;
+	        return ;         
+	    }
+
+	    try{
+
+		    RecordingAndTransmision rat = new RecordingAndTransmision(InetAddress.getByName( args[0] ));
+		    rat.start();
+
+
+	    ReciptionAndPlay  rap = new ReciptionAndPlay();
+	    rap.start();
+
+		}catch(Exception e){
+			System.out.println(e);
+		}
+
+
    }
+}
+
+class ReciptionAndPlay extends Thread{
+
+	private final static int packetsize = 500 ;
+	private final static int port = 45000 ;
+
+
+
+    public void run(){
+
+	    try{
+
+	       
+	        // Construct the socket
+	        DatagramSocket socket = new DatagramSocket( port ) ;
+
+	       // System.out.println( "The server is ready..." ) ;
+	    		
+	    	// Create a packet
+	        DatagramPacket packet = new DatagramPacket( new byte[packetsize], packetsize ) ;
+	        RecordingAndTransmision.captureAudio();	
+
+            for( ;; ){
+
+	            try{
+	                   
+	               	// Receive a packet (blocking)
+	          	    socket.receive( packet ) ;    
+
+	          	    // Print the packet
+	          	   //System.out.println( new String(packet.getData()) ) ;
+
+	        	    RecordingAndTransmision.sourceDataLine.write(packet.getData(), 0, 500); //playing the audio   
+	        		         
+	            }catch(Exception e){
+
+	        		System.out.println( e ) ;
+	        		
+	        	}
+	                    
+	        } 
+
+	    }catch( Exception e ){
+
+	        System.out.println( e ) ;
+	    		
+	    }
+
+	}
+
 }
