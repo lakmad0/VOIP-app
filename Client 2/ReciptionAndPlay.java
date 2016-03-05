@@ -1,5 +1,6 @@
 import java.net.* ;
 import java.io.ByteArrayOutputStream;
+import java.io.ByteArrayInputStream;
 import java.io.IOException;
 import javax.sound.sampled.AudioFormat;
 import javax.sound.sampled.AudioInputStream;
@@ -17,52 +18,51 @@ import javax.sound.sampled.TargetDataLine;
 
 public class ReciptionAndPlay extends InitResources implements Runnable{
 
-	private final int packetsize = 100 ;
-	private final int port = 45001 ;
+	public static final int PACKETSIZE = 100 ;
+	private final int port = 45000 ;
 
-	public ReciptionAndPlay(){
-		super.captureAudio();
+
+	public ReciptionAndPlay(){  
+
+		super.captureAudio();  //Initialize the resources
+
 	}
 
 
+  public void run(){
 
-    public void run(){
-
-	    try{
+	  try{
 	       
-	        // Construct the socket
-	        DatagramSocket socket = new DatagramSocket( this. port ) ;
-	        System.out.println( "The server is ready..." ) ;
+	    // Construct the socket
+	    DatagramSocket socket = new DatagramSocket( this. port ) ;	        
 	    		
-	    	// Create a packet
-	        DatagramPacket packet = new DatagramPacket( new byte[this.packetsize], (this.packetsize)) ;
-	        //this.captureAudio();
+	    // Create a packet
+	    DatagramPacket packet = new DatagramPacket( new byte[VoicePacket.SIZE], VoicePacket.SIZE) ;	        
 
-            for( ;; ){
+      for( ;; ){
 
-	            try{
-	                   
-	               	// Receive a packet (blocking)
-	          	    socket.receive( packet ) ;    
+	      try{
+	                  
+	        // Receive a packet (blocking)
+	        socket.receive( packet ) ;	          	    
+	        VoicePacket voicepacket = new VoicePacket(packet.getData());  //deserialize the voicepacket
 
-	          	    // Print the packet
-	          	   //System.out.println( new String(packet.getData()) ) ;
-
-	        	    this.getSourceDataLine().write(packet.getData(), 0, this.packetsize); //playing the audio   
+	        System.out.println("Packet get " +voicepacket.getSequenceNumber());   //print the sequence number
+	        this.getSourceDataLine().write( voicepacket.getData(), 0, PACKETSIZE); //playing the audio   
 	        		         
-	            }catch(Exception e){
-
-	        		System.out.println( e ) ;
-	        		
-	        	}
-	                    
-	        } 
-
-	    }catch( Exception e ){
+	      }catch(Exception e){
 
 	        System.out.println( e ) ;
+	        		
+	     	}	  
+	     	                 
+	    } 
+
+	  }catch( Exception e ){
+
+	    System.out.println( e ) ;
 	    		
-	    }
+	  }
 
 	}
 

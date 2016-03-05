@@ -6,7 +6,7 @@ import java.nio.ByteBuffer;
 import java.util.Arrays;
 import java.util.Date;
 
-class VoicePacket {
+class VoicePacket  {
 
 	public static final int SIZE = (Integer.SIZE + ReciptionAndPlay.PACKETSIZE * Byte.SIZE)/8 ; //get size for buffer
 
